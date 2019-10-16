@@ -28,6 +28,9 @@ class IncrementalState:
     def prev_rev(self):
         self.current_rev -= self.blocksize
 
+    def at_end(self) ->bool:
+        return (self.current_rev >= self.rev_end)
+
 @dataclasses.dataclass
 class ProgramData:
     #program data
@@ -120,7 +123,7 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
     else:
         print("Unable to chdir into " + destination + os.linesep + "It does not exist!")
         return False
-    while True:
+    while not state.at_end():
         state.next_rev()
         print(os.linesep + "Pulling revision " + str(state.current_rev) + os.linesep)
         if hgpull(destination, state.current_rev):
