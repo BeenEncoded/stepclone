@@ -1,10 +1,24 @@
-import sys, os, subprocess, dataclasses, pickle, atexit, argparse
+import sys, os, subprocess, dataclasses, pickle, atexit, argparse, re
 
-import random
+from urllib import request
+
+def most_recent_rev(repository):
+    print("Obtaining the most recent revision from the repository's log...")
+    rev_expression = "(rev [0-9]+)"
+    repository += "/log"
+    response = request.urlopen(repository)
+
+    matches = re.findall(rev_expression, str(response.read()))
+    if len(matches) == 0:
+        print("UNABLE TO READ THE REV!")
+        sys.exit(1)
+    print(repository + " @ " + matches[0][4:])
+    return matches[0][4:]
 
 @dataclasses.dataclass
 class IncrementalState:
     current_rev: int=0
+    rev_end: int=int(-1)
     blocksize: int=1
     cwd: str=os.getcwd()
 
@@ -56,6 +70,9 @@ def mkargparse():
         an incremental pull that was interrupted.")
     ap.add_argument("--revblock", "-rb", nargs='?', const=1, type=int, help="Specifies how many revisions to clone initially \
         or pull each time.  Default is 1.")
+    ap.add_argument("-force-update-revision", "-fur", action="store_true", help="Forces the program to grab the latest revision from the repository's \
+        changelogs.  This number is where the program will stop pulling revisions, so you may want to use this option if you \
+        have not continued pulling in a while...")
     return ap
 
 PDATA = ProgramData()
@@ -108,6 +125,7 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
         print(os.linesep + "Pulling revision " + str(state.current_rev) + os.linesep)
         if hgpull(destination, state.current_rev):
             PDATA.save()
+            print(os.linesep + "Percent complete: %" + str((state.current_rev * 100) / state.rev_end) + os.linesep)
         else:
             state.prev_rev()
             PDATA.save()
@@ -115,22 +133,7 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
             hgupdate(destination)
             break
 
-def test_pdata():
-    global PDATA
-    state = PDATA.state
-    for x in range(0, 1000):
-        PDATA = ProgramData()
-        state.current_rev = random.randint(1, 10000)
-        tempdata = ProgramData()
-        tempdata.state.current_rev = PDATA.state.current_rev
-        PDATA.save()
-        PDATA = ProgramData(state=IncrementalState())
-        assert PDATA.state.current_rev != tempdata.state.current_rev
-        PDATA.load()
-        assert PDATA.state.current_rev == tempdata.state.current_rev
-
 def main(argv):
-    global PARGS
     arguments = None
     if len(argv) > 1:
         arguments = PARGS.parse_args(argv[1:])
@@ -139,6 +142,9 @@ def main(argv):
     PDATA.load()
     if arguments.revblock is not None:
         PDATA.state.blocksize = arguments.revblock
+
+    if (PDATA.state.rev_end < 0) or arguments.force_update_revision:
+        PDATA.state.rev_end = int(most_recent_rev(arguments.repository))
 
     incremental_clone(arguments.repository, arguments.folder, PDATA.state.blocksize, arguments.pullonly)
 
