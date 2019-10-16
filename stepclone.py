@@ -17,10 +17,13 @@ class IncrementalState:
     def prev_rev(self):
         self.current_rev -= self.blocksize
 
-
+@dataclasses.dataclass
 class ProgramData:
-    def __init__(self, state: IncrementalState=IncrementalState()):
-        self.state_save_file = "python_clone_state.dat"
+    #program data
+    state: IncrementalState=IncrementalState()
+
+    #temp or constant metadata
+    state_save_file: str="python_clone_state.dat"
 
     def load(self) -> bool:
         return self._load_state()
@@ -119,13 +122,15 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
 def test_pdata():
     global PDATA
     state = PDATA.state
-    for x in range(0, 10000):
+    for x in range(0, 10):
         PDATA = ProgramData()
         PDATA.state.current_rev = random.randint(1, 10000)
         tempdata = ProgramData()
         tempdata.state.current_rev = PDATA.state.current_rev
         PDATA.save()
-        PDATA = ProgramData()
+        del(state)
+        del(PDATA)
+        PDATA = None
         assert PDATA.state.current_rev != tempdata.state.current_rev
         PDATA.load()
         assert PDATA.state.current_rev == tempdata.state.current_rev
