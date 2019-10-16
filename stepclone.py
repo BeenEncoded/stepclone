@@ -8,9 +8,6 @@ class IncrementalState:
     blocksize: int=1
     cwd: str=os.getcwd()
 
-    def __str__(self):
-        return ("Current Revision: " + str(self.rev))
-
     def next_rev(self):
         self.current_rev += self.blocksize
 
@@ -23,7 +20,7 @@ class ProgramData:
     state: IncrementalState=IncrementalState()
 
     #temp or constant metadata
-    state_save_file: str="python_clone_state.dat"
+    state_save_file: str=os.path.abspath("python_clone_state.dat")
 
     def load(self) -> bool:
         return self._load_state()
@@ -42,23 +39,19 @@ class ProgramData:
                     self.state = pickle.load(f)
                 except EOFError:
                     success = False
-            if success:
-                print(os.linesep + "Loaded " + str(self.state) + os.linesep)
-            else:
-                print(os.linesep + "Failed to load state!" + os.linesep)
+                except:
+                    success = False
             return success
         return True
 
     def _save_state(self):
-        print(os.linesep + "SAVING STATE: " + str(self.state) + os.linesep)
         with open(self.state_save_file, 'wb') as f:
             pickle.dump(self.state, f)
 
 def mkargparse():
     ap = argparse.ArgumentParser(description="A python utility to automate incrimental mercurial clones for large repositories.")
     ap.add_argument("repository", type=str, help="The mercurial repository to be cloned or pulled.")
-    ap.add_argument("folder", type=str, help="The folder the repository is located.  This command is meant \
-        to be executed at the repository\'s parent.  This allows for more flexible usage.")
+    ap.add_argument("folder", type=str, help="The folder the repository is located.  Give it the same name as the folder that hg will create.")
     ap.add_argument("--pullonly", "-p", action='store_true', help="Specifies that the program should skip cloning entirely.  This can be used to continue \
         an incremental pull that was interrupted.")
     ap.add_argument("--revblock", "-rb", nargs='?', const=1, type=int, help="Specifies how many revisions to clone initially \
@@ -146,7 +139,6 @@ def main(argv):
     PDATA.load()
     if arguments.revblock is not None:
         PDATA.state.blocksize = arguments.revblock
-        PDATA.save()
 
     incremental_clone(arguments.repository, arguments.folder, PDATA.state.blocksize, arguments.pullonly)
 
