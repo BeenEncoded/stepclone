@@ -41,12 +41,16 @@ class ProgramData:
                 try:
                     self.state = pickle.load(f)
                 except EOFError:
-                    print("failed to load")
                     success = False
+            if success:
+                print(os.linesep + "Loaded " + str(self.state) + os.linesep)
+            else:
+                print(os.linesep + "Failed to load state!" + os.linesep)
             return success
         return True
 
     def _save_state(self):
+        print(os.linesep + "SAVING STATE: " + str(self.state) + os.linesep)
         with open(self.state_save_file, 'wb') as f:
             pickle.dump(self.state, f)
 
@@ -87,7 +91,6 @@ def hgupdate() -> bool:
     return (result.returncode == 0)
 
 def incremental_clone(repository: str, destination: str, revblock: int=1, pullonly: bool=False) -> bool:
-    global PDATA
     state = PDATA.state
 
     if not pullonly:
@@ -122,24 +125,18 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
 def test_pdata():
     global PDATA
     state = PDATA.state
-    for x in range(0, 10):
+    for x in range(0, 1000):
         PDATA = ProgramData()
-        PDATA.state.current_rev = random.randint(1, 10000)
+        state.current_rev = random.randint(1, 10000)
         tempdata = ProgramData()
         tempdata.state.current_rev = PDATA.state.current_rev
         PDATA.save()
-        del(state)
-        del(PDATA)
-        PDATA = None
+        PDATA = ProgramData(state=IncrementalState())
         assert PDATA.state.current_rev != tempdata.state.current_rev
         PDATA.load()
         assert PDATA.state.current_rev == tempdata.state.current_rev
 
 def main(argv):
-    test_pdata()
-    exit()
-
-    global PDATA
     global PARGS
     arguments = None
     if len(argv) > 1:
