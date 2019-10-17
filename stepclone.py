@@ -76,6 +76,7 @@ def mkargparse():
     ap.add_argument("-force-update-revision", "-fur", action="store_true", help="Forces the program to grab the latest revision from the repository's \
         changelogs.  This number is where the program will stop pulling revisions, so you may want to use this option if you \
         have not continued pulling in a while...")
+    ap.add_argument("--cloneonly", "-c", action="store_true", help="Only clone the earliest revision of the repository.")
     return ap
 
 PDATA = ProgramData()
@@ -103,7 +104,7 @@ def hgupdate() -> bool:
     result = subprocess.run(command, stdout=sys.stdout)
     return (result.returncode == 0)
 
-def incremental_clone(repository: str, destination: str, revblock: int=1, pullonly: bool=False) -> bool:
+def incremental_clone(repository: str, destination: str, revblock: int=1, pullonly: bool=False, cloneonly=False) -> bool:
     state = PDATA.state
 
     if not pullonly:
@@ -116,25 +117,27 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
             state.prev_rev()
             return False
     
-    #we currently have no stop condition... yet...
-    if os.path.isdir(destination):
-        print("changing cwd to " + destination)
-        os.chdir(destination)
-    else:
-        print("Unable to chdir into " + destination + os.linesep + "It does not exist!")
-        return False
-    while not state.at_end():
-        state.next_rev()
-        print(os.linesep + "Pulling revision " + str(state.current_rev) + os.linesep)
-        if hgpull(destination, state.current_rev):
-            PDATA.save()
-            print(os.linesep + "Percent complete: %" + str((state.current_rev * 100) / state.rev_end) + os.linesep)
+    if not cloneonly:
+        #we currently have no stop condition... yet...
+        if os.path.isdir(destination):
+            print("changing cwd to " + destination)
+            os.chdir(destination)
         else:
-            state.prev_rev()
-            PDATA.save()
-            print(os.linesep + "Creating working copy..." + os.linesep)
-            hgupdate(destination)
-            break
+            print("Unable to chdir into " + destination + os.linesep + "It does not exist!")
+            return False
+        while not state.at_end():
+            state.next_rev()
+            print(os.linesep + "Pulling revision " + str(state.current_rev) + os.linesep)
+            if hgpull(destination, state.current_rev):
+                PDATA.save()
+                print(os.linesep + "Percent complete: %" + str((state.current_rev * 100) / state.rev_end) + os.linesep)
+            else:
+                state.prev_rev()
+                PDATA.save()
+                print(os.linesep + "Creating working copy..." + os.linesep)
+                hgupdate()
+                break
+    return state.at_end()
 
 def main(argv):
     arguments = None
@@ -149,9 +152,7 @@ def main(argv):
     if (PDATA.state.rev_end < 0) or arguments.force_update_revision:
         PDATA.state.rev_end = int(most_recent_rev(arguments.repository))
 
-    incremental_clone(arguments.repository, arguments.folder, PDATA.state.blocksize, arguments.pullonly)
-
-    return 0
+    return int(incremental_clone(arguments.repository, arguments.folder, PDATA.state.blocksize, arguments.pullonly, arguments.cloneonly))
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
