@@ -17,9 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/
 
-import sys, os, subprocess, dataclasses, pickle, atexit, argparse, re
+import sys, os, subprocess, dataclasses, pickle, atexit, argparse, re, semver
 
 from urllib import request
+
+VERSION = semver.VersionInfo(1, 1, 0, "beta")
 
 def most_recent_rev(repository):
     print("Obtaining the most recent revision from the repository's log...")
@@ -159,29 +161,28 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
     return state.at_end()
 
 def show_warranty() -> None:
-    print("""Stepclone clones a mercurial repository incrementally.  This can be 
-useful when the entire repository and all its checksums results
-in a clone that takes too long to be practical.
+    print("Stepclone v" + str(VERSION) + """ clones a mercurial repository incrementally.  This can be 
+    useful when the entire repository and all its checksums results
+    in a clone that takes too long to be practical.
 
-Copyright (C) 2019  Jonathan Whitlock
+    Copyright (C) 2019  Jonathan Whitlock
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see https://www.gnu.org/licenses/""")
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see https://www.gnu.org/licenses/""")
 
 def main(argv):
-    print("Stepclone  Copyright (C) 2019  Jonathan Whitlock " + os.linesep + "\
-    This program comes with ABSOLUTELY NO WARRANTY; for details pass `--warranty\' as \
-one of the program's arguments. " + os.linesep + "\
+    print("Stepclone " + str(VERSION) + "  Copyright (C) 2019  Jonathan Whitlock " + os.linesep + "\
+    This program comes with ABSOLUTELY NO WARRANTY; for details pass `--warranty\' as one of the program's arguments. " + os.linesep + "\
     This is free software, and you are welcome to redistribute it " + os.linesep + "\
     under certain conditions; pass --warranty for details." + os.linesep + os.linesep)
     if ("--warranty" in argv) or ("-w" in argv):
