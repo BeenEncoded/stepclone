@@ -50,14 +50,13 @@ class ProgramData:
         Loads the state.  Returns false if the file was not found.
         '''
         if os.path.isfile(self.state_save_file):
-            success = True
+            success = False
             with open(self.state_save_file, 'rb') as f:
                 try:
                     self.state = pickle.load(f)
-                except EOFError:
-                    success = False
+                    success = True
                 except:
-                    success = False
+                    pass
             return success
         return True
 
