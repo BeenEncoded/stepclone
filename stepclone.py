@@ -1,3 +1,22 @@
+# Stepclone clones a mercurial repository incrementally.  This can be 
+# useful when the entire repository and all its checksums results
+# in a clone that takes too long to be practical.
+
+# Copyright (C) 2019  Jonathan Whitlock
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see https://www.gnu.org/licenses/
+
 import sys, os, subprocess, dataclasses, pickle, atexit, argparse, re
 
 from urllib import request
@@ -76,6 +95,7 @@ def mkargparse():
         changelogs.  This number is where the program will stop pulling revisions, so you may want to use this option if you \
         have not continued pulling in a while...")
     ap.add_argument("--cloneonly", "-c", action="store_true", help="Only clone the earliest revision of the repository.")
+    ap.add_argument("--warranty", "-w", action="store_true", help="Show the copyright notice.")
     return ap
 
 PDATA = ProgramData()
@@ -138,12 +158,43 @@ def incremental_clone(repository: str, destination: str, revblock: int=1, pullon
                 break
     return state.at_end()
 
+def show_warranty() -> None:
+    print("""Stepclone clones a mercurial repository incrementally.  This can be 
+useful when the entire repository and all its checksums results
+in a clone that takes too long to be practical.
+
+Copyright (C) 2019  Jonathan Whitlock
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see https://www.gnu.org/licenses/""")
+
 def main(argv):
+    print("Stepclone  Copyright (C) 2019  Jonathan Whitlock " + os.linesep + "\
+    This program comes with ABSOLUTELY NO WARRANTY; for details pass `--warranty\' as \
+one of the program's arguments. " + os.linesep + "\
+    This is free software, and you are welcome to redistribute it " + os.linesep + "\
+    under certain conditions; pass --warranty for details." + os.linesep + os.linesep)
+    if ("--warranty" in argv) or ("-w" in argv):
+        show_warranty()
+        sys.exit(0)
+
     arguments = None
     if len(argv) > 1:
         arguments = PARGS.parse_args(argv[1:])
     else:
         PARGS.parse_args(argv) #this will print the appropriate error and exit
+    if arguments.warranty:
+        show_warranty()
     PDATA.load()
     if arguments.revblock is not None:
         PDATA.state.blocksize = arguments.revblock
